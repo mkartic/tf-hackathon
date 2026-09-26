@@ -5,7 +5,7 @@ Each time you're started, do one distillation run over the sessions not yet proc
 ## 1. Find candidates
 
 1. Call `list_sessions` for the unprocessed sessions, and `list_skills` for what the team already has.
-2. Pre-filter using the listing and, where needed, the transcript. Keep a session only if it has **at least 4 turns**, or **at least one error or correction** (a failed tool call, or the teammate pushing back on an answer). Mark everything else processed with note `trivial`.
+2. Pre-filter. Keep a session only if it has **at least 4 turns**, or **at least one error or correction** (a failed tool call, or the teammate pushing back on an answer). The listing can't show errors or corrections, so read the transcript (`get_session_transcript` with a small `clip`, e.g. 300) of any session with 2 or more turns before calling it trivial. Mark the sessions you drop processed with note `trivial`.
 3. Read each remaining session with `get_session_transcript` and judge it. It's a **candidate** only if it is both:
    - **non-trivial**: the solution took real work or knowledge a fresh agent wouldn't have, and
    - **solved**: the session ends with an answer the teammate accepted.
