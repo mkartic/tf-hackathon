@@ -75,6 +75,9 @@ class GitHub:
     def get_pr(self, number: int) -> dict:
         return self._req("GET", f"/pulls/{number}").json()
 
+    def update_pr_body(self, number: int, body: str) -> None:
+        self._req("PATCH", f"/pulls/{number}", json={"body": body})
+
     def merge_pr(self, number: int, title: str) -> str:
         r = self._req(
             "PUT", f"/pulls/{number}/merge", json={"merge_method": "squash", "commit_title": title}

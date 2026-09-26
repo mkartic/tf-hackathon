@@ -43,6 +43,38 @@ class TrueForge:
                 break
         return [it["event"] for it in reversed(items)]
 
+    def get_session(self, session_id: str) -> dict:
+        return self._req("GET", f"/sessions/{session_id}")["data"]
+
+    def list_turns(self, session_id: str) -> list[dict]:
+        turns, token = [], None
+        while True:
+            params = {"limit": 100} | ({"page_token": token} if token else {})
+            page = self._req("GET", f"/sessions/{session_id}/turns", params=params)
+            turns += page["data"]
+            token = page["pagination"].get("next_page_token")
+            if not token:
+                return turns
+
+    def create_session(self, spec: dict, metadata: dict[str, str]) -> dict:
+        """A session bound to an inline AgentSpec (no registry agent)."""
+        body = {"agent": {"spec": spec}, "metadata": metadata}
+        return self._req("POST", "/sessions", json=body)["data"]
+
+    def start_turn(self, session_id: str, message: str) -> dict:
+        """Start a root turn with one user message; returns the running turn."""
+        body = {"input": [{"type": "user.message", "content": message}], "stream": False}
+        return self._req("POST", f"/sessions/{session_id}/turns", json=body)["data"]
+
+    def get_turn(self, session_id: str, turn_id: str) -> dict:
+        return self._req("GET", f"/sessions/{session_id}/turns/{turn_id}")["data"]
+
+    def cancel_session(self, session_id: str) -> None:
+        self._req("POST", f"/sessions/{session_id}/cancel", json={})
+
+    def get_agent(self, agent_id: str) -> dict:
+        return self._req("GET", f"/agents/{agent_id}")["data"]
+
     def upsert_skill(self, manifest: dict) -> None:
         self._req("PUT", "/settings/skills", json={"manifest": manifest})
 
@@ -59,12 +91,55 @@ class TrueForge:
         self._req("PUT", f"/agents/{agent['id']}", json=body)
 
 
+def agent_spec(tf: TrueForge, session: dict) -> dict:
+    """The AgentSpec a session ran with: inline, or the registry agent's current manifest."""
+    agent = session["agent"]
+    return agent["spec"] if agent["type"] == "inline" else tf.get_agent(agent["id"])["manifest"]
+
+
 def is_skillsmith_session(session: dict) -> bool:
     return (session.get("metadata") or {}).get("source") == SKILLSMITH_SOURCE
 
 
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else f"{text[:limit]}… [{len(text) - limit} chars cut]"
+
+
+def text_of(content) -> str:
+    """Message content as plain text: a string, or the text parts of a content list."""
+    if isinstance(content, str):
+        return content
+    return "\n".join(p.get("text", "") for p in content or [] if p.get("type") == "text")
+
+
+def first_user_message(events: list[dict]) -> str | None:
+    for e in events:
+        if e["type"] == "turn.created":
+            for item in e.get("input", []):
+                if item.get("type") == "user.message" and text_of(item["content"]).strip():
+                    return text_of(item["content"])
+    return None
+
+
+def _main_thread_messages(events: list[dict]) -> list[dict]:
+    return [e for e in events
+            if e["type"] == "model.message" and e.get("thread_id", "main") == "main"]
+
+
+def final_answer(events: list[dict]) -> str | None:
+    """The agent's last non-empty message: its eventual answer."""
+    for e in reversed(_main_thread_messages(events)):
+        if text_of(e.get("content")).strip():
+            return text_of(e["content"])
+    return None
+
+
+def model_calls(events: list[dict]) -> int:
+    return len(_main_thread_messages(events))
+
+
+def turn_tokens(turn: dict) -> int:
+    return (turn["state"].get("metrics") or {}).get("total_tokens") or 0
 
 
 def transcript(events: list[dict], clip: int = 800) -> str:
@@ -75,12 +150,12 @@ def transcript(events: list[dict], clip: int = 800) -> str:
             case "turn.created":
                 for item in e.get("input", []):
                     if item.get("type") == "user.message":
-                        lines.append(f"USER: {item['content']}")
+                        lines.append(f"USER: {text_of(item['content'])}")
                     elif item.get("type") == "user.tool_approval":
                         lines.append(f"USER APPROVAL: {json.dumps(item)}")
             case "model.message":
-                if e.get("content"):
-                    lines.append(f"AGENT: {e['content']}")
+                if text_of(e.get("content")):
+                    lines.append(f"AGENT: {text_of(e['content'])}")
                 for call in e.get("tool_calls") or []:
                     fn = call["function"]
                     lines.append(f"TOOL CALL {fn['name']}: {_clip(fn['arguments'], clip)}")

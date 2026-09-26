@@ -32,6 +32,12 @@ class State:
     def proposal(self, pr_number: int) -> dict | None:
         return self._data["proposals"].get(str(pr_number))
 
+    def proposal_for_branch(self, branch: str) -> tuple[int, dict] | None:
+        for number, p in self._data["proposals"].items():
+            if p.get("branch") == branch:
+                return int(number), p
+        return None
+
     def close_proposal(self, pr_number: int, outcome: str) -> None:
         if p := self._data["proposals"].get(str(pr_number)):
             p["outcome"] = outcome

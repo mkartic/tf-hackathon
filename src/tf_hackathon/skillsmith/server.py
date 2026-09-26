@@ -13,6 +13,7 @@ from mcp.types import ToolAnnotations
 
 from tf_hackathon.skillsmith.config import Config
 from tf_hackathon.skillsmith.github import GitHub
+from tf_hackathon.skillsmith.replay import Replayer
 from tf_hackathon.skillsmith.scrub import report_markdown, scrub_files, scrub_text, summary
 from tf_hackathon.skillsmith.state import State
 from tf_hackathon.skillsmith.trueforge import (
@@ -102,6 +103,13 @@ Distilled from these TrueForge sessions:
 Don't merge this PR on GitHub. The distiller is paused in TrueForge ({cfg.trueforge_url}) on
 `publish_skill` for this PR: **Allow** publishes it to the team, **Deny** closes it.
 """
+
+
+def with_verification(pr_body: str, verification: str) -> str:
+    """The PR body with its Verification section replaced."""
+    body, n = re.subn(r"(### Verification\n).*?(?=\n\n### )", lambda m: m[1] + verification,
+                      pr_body, count=1, flags=re.S)
+    return body if n else f"{pr_body.rstrip()}\n\n### Verification\n{verification}\n"
 
 
 def _propose(kind: str, name: str, description: str, instructions: str,
@@ -238,6 +246,34 @@ def propose_skill_update(name: str, description: str, instructions: str, rationa
         raise ToolError(f"No published skill named {name!r}; use propose_skill.")
     return _propose("update", name, description, instructions, files, rationale,
                     source_session_ids, verification)
+
+
+@mcp.tool(annotations=WRITE)
+def replay_with_skill(session_id: str, branch: str) -> dict:
+    """Check that a skill proposal helps: re-run the session's first user message in a fresh
+    session with only the proposed skill attached, and have an LLM judge compare the answer
+    with the original session's final answer.
+
+    session_id: the candidate session the skill was distilled from. branch: the proposal's
+    branch, as returned by propose_skill. Pass = correct answer in fewer turns. The results are
+    written into the PR's Verification section and returned here. Takes a few minutes.
+    """
+    cfg, tf, gh, state = _deps()
+    found = state.proposal_for_branch(branch)
+    if found is None or "outcome" in found[1]:
+        raise ToolError(f"Branch {branch!r} is not an open skillsmith proposal.")
+    pr_number, proposal = found
+    replayer = Replayer(tf, cfg.repo_url, cfg.skills_dir, cfg.replay_skill_slot,
+                        timeout_s=cfg.replay_timeout_s)
+    result = replayer.replay(session_id, proposal["name"], branch)
+    verification, _ = scrub_text(result.markdown(proposal["name"], branch))
+    pr = gh.get_pr(pr_number)
+    gh.update_pr_body(pr_number, with_verification(pr["body"] or "", verification))
+    state.record_proposal(pr_number, proposal | {"replay": {
+        "session_id": result.replay.session_id, "passed": result.passed}})
+    return {"pr_number": pr_number, "passed": result.passed, "correct": result.correct,
+            "judge_reason": result.judge_reason,
+            "original": vars(result.original), "replay": vars(result.replay)}
 
 
 @mcp.tool(annotations=WRITE)

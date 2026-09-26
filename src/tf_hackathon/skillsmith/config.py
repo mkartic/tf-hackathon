@@ -11,6 +11,8 @@ class Config:
     skills_dir: str
     team_agents: list[str]
     state_path: Path
+    replay_skill_slot: str = "skillsmith-replay"  # reused: TrueForge can't delete skills
+    replay_timeout_s: float = 600
 
     @property
     def repo_url(self) -> str:
@@ -25,4 +27,6 @@ class Config:
             skills_dir=os.environ.get("SKILLSMITH_SKILLS_DIR", "skills"),
             team_agents=os.environ.get("SKILLSMITH_TEAM_AGENTS", "acme-ops").split(","),
             state_path=Path(os.environ.get("SKILLSMITH_STATE", ".skillsmith/state.json")),
+            replay_skill_slot=os.environ.get("SKILLSMITH_REPLAY_SLOT", "skillsmith-replay"),
+            replay_timeout_s=float(os.environ.get("SKILLSMITH_REPLAY_TIMEOUT", "600")),
         )
