@@ -6,13 +6,20 @@
     "mcp_servers": [
       {
         "name": "acme-app",
-        "enable_tools": ["@all"],
+        "enable_tools": [
+          "@all"
+        ],
         "preload": true
       }
     ],
     "skills": [],
     "config": {
-      "sandbox": { "enabled": true }
+      "sandbox": {
+        "enabled": true
+      },
+      "ask_user_questions": {
+        "enabled": false
+      }
     }
   }
 }
