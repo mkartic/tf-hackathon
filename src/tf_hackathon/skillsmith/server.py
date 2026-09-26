@@ -13,6 +13,7 @@ from mcp.types import ToolAnnotations
 
 from tf_hackathon.skillsmith.config import Config
 from tf_hackathon.skillsmith.github import GitHub
+from tf_hackathon.skillsmith.scrub import report_markdown, scrub_files, scrub_text, summary
 from tf_hackathon.skillsmith.state import State
 from tf_hackathon.skillsmith.trueforge import (
     TrueForge,
@@ -77,7 +78,7 @@ def parse_frontmatter(skill_md: str) -> dict[str, str]:
 
 
 def _pr_body(kind: str, name: str, description: str, rationale: str, sessions: list[str],
-             verification: str) -> str:
+             verification: str, scrub_report: str) -> str:
     cfg, tf, _, _ = _deps()
     evidence = "\n".join(f"- `{sid}`" for sid in sessions) or "- (none given)"
     return f"""## Skill {kind}: `{name}`
@@ -94,6 +95,9 @@ Distilled from these TrueForge sessions:
 ### Verification
 {verification or "_Not replayed._"}
 
+### Scrub
+{scrub_report}
+
 ### Review
 Don't merge this PR on GitHub. The distiller is paused in TrueForge ({cfg.trueforge_url}) on
 `publish_skill` for this PR: **Allow** publishes it to the team, **Deny** closes it.
@@ -104,25 +108,34 @@ def _propose(kind: str, name: str, description: str, instructions: str,
              files: dict[str, str] | None, rationale: str, source_session_ids: list[str],
              verification: str) -> dict:
     cfg, _, gh, state = _deps()
-    changes: dict[str, str | None] = {
-        _skill_path(cfg, name): render_skill_md(name, description, instructions)
-    }
+    changes: dict[str, str] = {"SKILL.md": render_skill_md(name, description, instructions)}
     for rel, content in (files or {}).items():
         if rel.startswith("/") or ".." in rel.split("/") or rel == "SKILL.md":
             raise ToolError(f"Bad skill file path {rel!r}")
-        changes[_skill_path(cfg, name, rel)] = content
+        changes[rel] = content
+    # Scrub before anything leaves skillsmith: the skills repo and its PRs are public (ADR 0003).
+    changes, findings = scrub_files(changes)
+    rationale, found = scrub_text(rationale, "PR description")
+    findings += found
+    verification, found = scrub_text(verification, "PR description")
+    findings += found
+    description = parse_frontmatter(changes["SKILL.md"])["description"]
     branch = f"{BRANCH_PREFIX}{name}-{int(time.time())}"
     title = f"Skill {kind}: {name}"
-    gh.commit_to_new_branch(branch, title, changes)
+    gh.commit_to_new_branch(
+        branch, title, {_skill_path(cfg, name, rel): c for rel, c in changes.items()}
+    )
     pr = gh.open_pr(
         branch, title,
-        _pr_body(kind, name, description, rationale, source_session_ids, verification),
+        _pr_body(kind, name, description, rationale, source_session_ids, verification,
+                 report_markdown(findings)),
     )
     state.record_proposal(pr["number"], {
         "kind": kind, "name": name, "description": description, "branch": branch,
         "sessions": source_session_ids,
     })
-    return {"pr_number": pr["number"], "url": pr["html_url"], "branch": branch}
+    return {"pr_number": pr["number"], "url": pr["html_url"], "branch": branch,
+            "scrub": summary(findings)}
 
 
 @mcp.tool(annotations=READ)
@@ -203,6 +216,8 @@ def propose_skill(name: str, description: str, instructions: str, rationale: str
     instructions: the SKILL.md body (markdown). files: extra files keyed by path relative to
     the skill folder, e.g. {"scripts/error_rate.py": "..."}. rationale: why this is worth
     a skill. verification: replay results, if any.
+
+    Everything is scrubbed of secrets and personal data first; the PR lists what was removed.
     """
     _check_name(name)
     cfg, _, gh, _ = _deps()
