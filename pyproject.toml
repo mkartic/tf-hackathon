@@ -1,0 +1,19 @@
+[project]
+name = "tf-hackathon"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "M Karthick", email = "827302+mkartic@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "daytona>=0.218.0",
+]
+
+[project.scripts]
+tf-hackathon = "tf_hackathon:main"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
