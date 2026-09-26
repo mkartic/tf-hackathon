@@ -9,8 +9,8 @@ SKILLSMITH_SOURCE = "skillsmith"
 
 
 class TrueForge:
-    def __init__(self, base_url: str):
-        self.http = httpx.Client(base_url=f"{base_url}/api/v1", timeout=60)
+    def __init__(self, base_url: str, transport: httpx.BaseTransport | None = None):
+        self.http = httpx.Client(base_url=f"{base_url}/api/v1", timeout=60, transport=transport)
 
     def _req(self, method: str, url: str, **kw) -> dict:
         r = self.http.request(method, url, **kw)
@@ -89,6 +89,34 @@ class TrueForge:
         if agent.get("description"):
             body["description"] = agent["description"]
         self._req("PUT", f"/agents/{agent['id']}", json=body)
+
+    def create_agent(self, name: str, description: str, manifest: dict) -> dict:
+        body = {"name": name, "description": description, "manifest": manifest}
+        return self._req("POST", "/agents", json=body)["data"]
+
+    def mcp_server_exists(self, name: str) -> bool:
+        r = self.http.get(f"/mcp-servers/{name}")
+        if r.status_code != 404 and r.is_error:
+            raise ToolError(f"TrueForge GET /mcp-servers/{name} -> {r.status_code}: {r.text[:500]}")
+        return r.status_code != 404
+
+    def model_names(self) -> list[str]:
+        return [m["name"] for m in self._req("GET", "/models")["data"]]
+
+    def find_schedule(self, agent_name: str, name: str) -> dict | None:
+        page = self._req("GET", "/schedules", params={"agent_names": agent_name})
+        return next((s for s in page["data"] if s["name"] == name), None)
+
+    def create_schedule(self, agent_name: str, name: str, manifest: dict) -> dict:
+        body = {"agent_name": agent_name, "name": name, "manifest": manifest}
+        return self._req("POST", "/schedules", json=body)["data"]
+
+    def update_schedule(self, schedule_id: str, name: str, manifest: dict) -> dict:
+        body = {"name": name, "manifest": manifest}
+        return self._req("PUT", f"/schedules/{schedule_id}", json=body)["data"]
+
+    def run_schedule(self, schedule_id: str) -> dict:
+        return self._req("POST", "/schedules/runs", json={"schedule_id": schedule_id})["data"]
 
 
 def agent_spec(tf: TrueForge, session: dict) -> dict:

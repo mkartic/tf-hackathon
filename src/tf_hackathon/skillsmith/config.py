@@ -13,6 +13,8 @@ class Config:
     state_path: Path
     replay_skill_slot: str = "skillsmith-replay"  # reused: TrueForge can't delete skills
     replay_timeout_s: float = 600
+    # Scheduled sessions can't carry metadata.source=skillsmith, so they're known by agent.
+    distiller_agents: tuple[str, ...] = ("distiller",)
 
     @property
     def repo_url(self) -> str:
@@ -29,4 +31,7 @@ class Config:
             state_path=Path(os.environ.get("SKILLSMITH_STATE", ".skillsmith/state.json")),
             replay_skill_slot=os.environ.get("SKILLSMITH_REPLAY_SLOT", "skillsmith-replay"),
             replay_timeout_s=float(os.environ.get("SKILLSMITH_REPLAY_TIMEOUT", "600")),
+            distiller_agents=tuple(
+                os.environ.get("SKILLSMITH_DISTILLER_AGENTS", "distiller").split(",")
+            ),
         )

@@ -1,0 +1,21 @@
+{
+  "name": "distiller",
+  "description": "Mines the team's sessions for hard-won know-how and proposes verified skills for a reviewer to publish.",
+  "manifest": {
+    "instructions_file": "distiller.md",
+    "mcp_servers": [
+      {
+        "name": "skillsmith",
+        "enable_tools": ["@all"],
+        "require_approval_for_tools": ["@destructive"],
+        "preload": true
+      }
+    ],
+    "skills": [],
+    "config": {
+      "iteration_limit": 200,
+      "sandbox": { "enabled": true },
+      "ask_user_questions": { "enabled": false }
+    }
+  }
+}

@@ -152,10 +152,11 @@ def list_sessions(limit: int = 50) -> list[dict]:
 
     Skillsmith's own sessions (distiller runs and replays) are never listed.
     """
-    _, tf, _, state = _deps()
+    cfg, tf, _, state = _deps()
     out = []
     for s in tf.list_sessions(limit=limit * 3):
-        if is_skillsmith_session(s) or state.is_processed(s["id"]):
+        if (is_skillsmith_session(s) or s["agent"].get("name") in cfg.distiller_agents
+                or state.is_processed(s["id"])):
             continue
         meta = s.get("metadata") or {}
         agent = s["agent"]

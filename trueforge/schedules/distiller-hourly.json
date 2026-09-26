@@ -1,0 +1,10 @@
+{
+  "name": "distiller-hourly",
+  "agent_name": "distiller",
+  "manifest": {
+    "task": "Start a distillation run over the sessions not yet processed.",
+    "cron": "0 * * * *",
+    "timezone": "UTC",
+    "status": "active"
+  }
+}
