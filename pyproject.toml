@@ -9,11 +9,18 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "daytona>=0.218.0",
+    "mcp>=2.2.0",
 ]
 
 [project.scripts]
 tf-hackathon = "tf_hackathon:main"
+acme-app = "tf_hackathon.acme_app.server:main"
 
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
