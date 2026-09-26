@@ -1455,6 +1455,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "daytona" },
+    { name = "httpx" },
     { name = "mcp" },
 ]
 
@@ -1466,6 +1467,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "daytona", specifier = ">=0.218.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", specifier = ">=2.2.0" },
 ]
 
