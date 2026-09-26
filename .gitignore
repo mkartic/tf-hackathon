@@ -1,0 +1,15 @@
+# Secrets and local config
+.env
+.env.*
+daytona_sample.py
+
+# Python
+__pycache__/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# Local skillsmith state
+*.sqlite
