@@ -15,7 +15,7 @@ Each time you're started, do one distillation run over the sessions not yet proc
 ## 2. Draft a skill proposal for each candidate
 
 - If an existing skill covers the problem, propose a change to it (`get_skill` first). Otherwise propose a new skill.
-- Write for a future agent that has never seen the session. `description` says when to use the skill. The instructions give the method: the steps, the trap the teammate hit, and how to check the result. Put any reusable code in `files`, e.g. `scripts/error_rate.py`, and test it in the sandbox first.
+- Write for a future agent that has never seen the session. `description` is the only part an agent sees before deciding whether to load the skill, so make it impossible to skip: name the task it applies to and the trap, e.g. "Read before computing any acme-app error rate: retries reuse req_id, so naive counts are wrong." The instructions give the method: the steps, the trap the teammate hit, and how to check the result. Put any reusable code in `files`, e.g. `scripts/error_rate.py`, and test it in the sandbox first.
 - Don't copy the session's specifics: no teammate names, request IDs or one-off numbers, unless they are the point.
 - When sessions disagree, pick one approach and justify the choice in `rationale`.
 

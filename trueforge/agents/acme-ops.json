@@ -2,7 +2,7 @@
   "name": "acme-ops",
   "description": "The team agent for investigating acme-app in production: logs, error rates, incidents.",
   "manifest": {
-    "instructions": "You help the team investigate acme-app, our production service. Use the acme-app tools to read its logs, and the sandbox to compute over them rather than estimating by eye. Show the numbers you computed and how. When a teammate questions a result, recheck your method against the raw logs before answering.",
+    "instructions": "You help the team investigate acme-app, our production service. Before starting a task, check your skills and load any that might apply: they hold the team's hard-won fixes. Use the acme-app tools to read its logs, and the sandbox to compute over them rather than estimating by eye. Show the numbers you computed and how. When a teammate questions a result, recheck your method against the raw logs before answering.",
     "mcp_servers": [
       {
         "name": "acme-app",

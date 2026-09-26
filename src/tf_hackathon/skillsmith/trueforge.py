@@ -21,7 +21,7 @@ class TrueForge:
     def list_sessions(self, limit: int = 100) -> list[dict]:
         sessions, token = [], None
         while len(sessions) < limit:
-            params = {"limit": min(100, limit - len(sessions)), "order": "desc"}
+            params = {"limit": min(25, limit - len(sessions)), "order": "desc"}
             if token:
                 params["page_token"] = token
             page = self._req("GET", "/sessions", params=params)
@@ -49,7 +49,7 @@ class TrueForge:
     def list_turns(self, session_id: str) -> list[dict]:
         turns, token = [], None
         while True:
-            params = {"limit": 100} | ({"page_token": token} if token else {})
+            params = {"limit": 25} | ({"page_token": token} if token else {})
             page = self._req("GET", f"/sessions/{session_id}/turns", params=params)
             turns += page["data"]
             token = page["pagination"].get("next_page_token")
